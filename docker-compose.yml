@@ -1,0 +1,65 @@
+services:
+  #Desplegamos los servicios del backend en Flask
+  backend:
+    build: ./backend
+    # Política de reinicio recomendada para servicios persistentes: reinicia el contenedor automáticamente
+    # ante fallos o reinicios del sistema, pero respeta paradas manuales.
+    # otras opciones que tenemos también: on-failure, always
+    restart: unless-stopped
+    container_name: tienda_flask_backend
+    ports:
+      - "5000:5000"
+    environment:
+      # Variables para que Flask se conecte al MySQL del contenedor
+      DB_HOST: db
+      DB_USER: mopii
+      DB_PASSWORD: daw
+      DB_NAME: tienda_forestal
+    depends_on:
+      - db
+
+  # Construye la aplicación Vue, expone la interfaz web al exterior y depende del backend para operar.
+  frontend:
+    build: ./frontend
+    container_name: tienda_vue_frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+        
+  #Desplegamos los servicios de la base de datos MySQL
+  db:
+    image: mysql:8.0
+    container_name: tienda_mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: iesmariamoliner
+      MYSQL_DATABASE: tienda_forestal
+      MYSQL_USER: mopii
+      MYSQL_PASSWORD: daw
+    ports:
+      - "3306:3306"
+    volumes:
+      # Persistencia de datos
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  #Incluimos el servicio phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_web
+    restart: unless-stopped
+    ports:
+      - "8081:80"     # Acceso desde http://localhost:8081 
+                      # login:
+    environment:
+      PMA_HOST: db        # phpMyAdmin debe mirar al contenedor "db" creado con anterioridad
+      PMA_USER: mopii
+      PMA_PASSWORD: daw
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:
+
